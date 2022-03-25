@@ -1,0 +1,4 @@
+# Ignore vendor folder
+vendor/
+app.log
+composer.lock
