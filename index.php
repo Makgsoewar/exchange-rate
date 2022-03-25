@@ -22,7 +22,7 @@ $toArray = json_decode($res->getBody(), true);
 $rates = [];
 foreach ($toArray as $key => $value) {
     if ($value['code'] == 'USD') {
-        $rates['buy'] = number_format('44034.9',2,'.','');
+        $rates['buy'] = number_format($value['rate'],2,'.','');
     }
     if ($value['code'] == 'EUR') {
         $rates['sell'] = number_format($value['rate'],2,'.','');
