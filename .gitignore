@@ -2,3 +2,4 @@
 vendor/
 app.log
 composer.lock
+.env

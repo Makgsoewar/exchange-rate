@@ -3,39 +3,64 @@
 require __DIR__ . '/vendor/autoload.php';
 
 use \Google\Cloud\Firestore\FirestoreClient;
+use \Dotenv\Dotenv;
+
+$dotenv = Dotenv::createUnsafeImmutable(__DIR__);
+$dotenv->load();
+
+$projectId = getenv('GOOGLE_PROJECT_ID','firestore-app-id');
 
 $client = new \GuzzleHttp\Client();
 $res = $client->request('GET', 'https://bitpay.com/api/rates', []);
-
-// Send an asynchronous request.
-// $request = new \GuzzleHttp\Psr7\Request('GET', 'http://httpbin.org');
-// $promise = $client->sendAsync($request)->then(function ($response) {
-//     echo 'I completed! ' . $response->getBody();
-// });
-
+ 
+$log = new Monolog\Logger('name');
+$log->pushHandler(new Monolog\Handler\StreamHandler('app.log', Monolog\Logger::WARNING));
+$log->warning($res->getBody());
+ 
 $toArray = json_decode($res->getBody(), true);
 
-$data = [];
+$rates = [];
 foreach ($toArray as $key => $value) {
-    if ($value['code'] == 'USD' || $value['code'] == 'EUR') {
-        $data[] = $value;
+    if ($value['code'] == 'USD') {
+        $rates['buy'] = number_format('44034.9',2,'.','');
+    }
+    if ($value['code'] == 'EUR') {
+        $rates['sell'] = number_format($value['rate'],2,'.','');
     }
 }
 
+
+
+$last_numbers = array_map(function($rate){
+    return substr($rate, -1);
+}, $rates);
+
+$number = $last_numbers['buy'].$last_numbers['sell'];
+
 # Your Google Cloud Platform project ID
-$projectId = 'firestore-tut-5711d';
 // $serviceAccountPath = '/home/thinaung/Documents/firestore_keyfile.json';
 
-
-# Explicitly use service account credentials by specifying the private key
-    
 $db = new FirestoreClient([
+    // 'keyFilePath' => '/home/thinaung/Documents/firestore_keyfile.json',
     'projectId' => $projectId,
 ]);
 
-$docRef = $db->collection('currency')->document('exchange_rate');
+$date = date('Y-m-d'); 
+$time = date('H:i'); 
+
+$data = [
+    "buy" => $rates['buy'],
+    "date_time" => date('Y-m-d H:i:s'),
+    "number" => $number,
+    "sell" => $rates['sell'],
+];
+
+$current = $db->collection('currency')->document('current');
+$current->set($data);
+
+$docRef = $db->collection('currency/daily/'.$date)->document($time);
 $docRef->set($data);
 
-$log = new Monolog\Logger('name');
-$log->pushHandler(new Monolog\Handler\StreamHandler('app.log', Monolog\Logger::WARNING));
-$log->warning(json_encode($data));
+
+
+$log->warning(json_encode($number));
